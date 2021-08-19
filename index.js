@@ -1,54 +1,42 @@
-const express = require('express');
-const app = express();
-const http = require('http');
-const server = http.createServer(app);
-const {
-  Server
-} = require("socket.io");
-const io = new Server(server);
-const path = require('path')
-const users = []
-const message = []
-app.use(express.static(path.join(__dirname + '/public')))
-
+const express = require('express')
+const app = express()
+const http = require('http').Server(app)
+const io = require('socket.io')(http)
+let users = []
+app.use(express.static(__dirname + '/public'))
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
-});
+  res.sendFile(__dirname + '/index.html')
+})
 
 io.on('connection', (socket) => {
   socket.on('login', (data) => {
-    const foundUser = users.find((user) => {
-      return user.nik === data.nik
+    const found = users.find((user) => {
+      return data === user
     })
-    if (!foundUser) {
+    console.log(found);
+    if (!found) {
       users.push(data)
-      io.sockets.emit('login', {
-        nik: data.nik,
-        status: 'OK'
-      })
+      socket.nikName = data
+      io.sockets.emit('user', users)
+      socket.emit('login', { status: 'OK' })
     } else {
-      io.sockets.emit('login', {
-        nik: data.nik,
-        status: 'FAILD'
-      })
+      socket.emit('login', { status: 'FAILED' })
     }
+
   })
-  
-  socket.on('message',(data)=>{
-    message.push(data)
-    io.sockets.emit('message', {
-      newMsg: data.message,
-      date: data.date
+
+  socket.on('messages', (mes) => {
+    io.sockets.emit('new message', {
+      newMas:mes,
+      time: new Date()
     })
   })
-  
-  
-  
-  
-  
-  
-});
 
-server.listen(3000, () => {
-  console.log('listening on *:3000');
-});
+
+})
+
+
+
+http.listen(3000, () => {
+  console.log('Server is working . . .');
+})
